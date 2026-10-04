@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zielen</title>
+<link rel="stylesheet" href="base.css">
+<style>
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{position:fixed;top:0;left:0;right:0;bottom:0;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+#cv{display:block;width:100%;height:100%;touch-action:none}
+#hud{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 10px);display:flex;justify-content:space-between;padding:0 16px;pointer-events:none;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:700}
+#tl{color:var(--mute);font-weight:500}
+.ov{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45)}
+.ov.hide{display:none}
+.panel{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;text-align:center}
+.big.gold{color:var(--gold)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+<div id="hud"><span id="sc">0</span><span id="tl">30.0</span></div>
+<div class="ov" id="ov"><div class="panel">
+  <p class="label">Zielen</p>
+  <p class="big" id="ovBig">Bereit?</p>
+  <p class="sub" id="ovSub">30 Sekunden. Tippe die Ziele, bevor sie verschwinden. Ein Tipp daneben kostet einen Punkt. Treffer am Stück bringen mehr Punkte.</p>
+  <button class="btn" id="go">Start</button>
+  <a class="back" href="index.html">← Menü</a>
+</div></div>
+<script>
+var cv=document.getElementById("cv"),ctx=cv.getContext("2d"),sc=document.getElementById("sc"),tl=document.getElementById("tl");
+var ov=document.getElementById("ov"),ovBig=document.getElementById("ovBig"),ovSub=document.getElementById("ovSub");
+var KEY="game:zielen:best",DUR=30;
+var W=0,H=0,unit=0,R=26,st="ready",targets=[],fx=[],t=0,last=0,next=0,lock=0;
+var score=0,hits=0,fails=0,missed=0,streak=0,best=0,col={bg:"#101215",accent:"#e5483d",ok:"#2fd27a"};
+try{best=parseInt(localStorage.getItem(KEY),10)||0}catch(e){}
+function fit(){var d=Math.min(window.devicePixelRatio||1,2);W=cv.clientWidth;H=cv.clientHeight;unit=Math.min(W,H);R=Math.max(24,Math.min(38,unit*0.07));cv.width=Math.round(W*d);cv.height=Math.round(H*d);ctx.setTransform(d,0,0,d,0,0);draw()}
+function colors(){var s=getComputedStyle(document.documentElement);["bg","accent","ok"].forEach(function(k){col[k]=s.getPropertyValue("--"+k).trim()||col[k]})}
+function mult(){return 1+Math.min(3,Math.floor(streak/5))}
+function hud(){sc.textContent=score+(mult()>1?"  ×"+mult():"");tl.textContent=Math.max(0,DUR-t).toFixed(1)}
+function reset(){targets=[];fx=[];t=0;next=0;score=0;hits=0;fails=0;missed=0;streak=0;hud()}
+function spawn(){
+  var life=Math.max(0.7,1.4-0.025*t),top=70,x,y,ok,n=0;
+  do{x=R+8+Math.random()*(W-2*R-16);y=top+R+Math.random()*(H-top-2*R-24);
+    ok=targets.every(function(q){var dx=q.x-x,dy=q.y-y;return dx*dx+dy*dy>4*R*R});n++}while(!ok&&n<12);
+  if(ok)targets.push({x:x,y:y,born:t,life:life});
+}
+function rad(q){return R*(1-0.65*Math.min(1,(t-q.born)/q.life))}
+function update(dt){
+  t+=dt;
+  for(var i=targets.length-1;i>=0;i--)if(t-targets[i].born>=targets[i].life){fx.push({x:targets[i].x,y:targets[i].y,t:t,k:"gone"});targets.splice(i,1);missed++;streak=0}
+  if(t>=next&&targets.length<Math.min(3,1+Math.floor(t/10))){spawn();next=t+0.15+Math.random()*0.25}
+  fx=fx.filter(function(f){return t-f.t<0.3});
+  hud();if(t>=DUR)finish();
+}
+function draw(){
+  ctx.fillStyle=col.bg;ctx.fillRect(0,0,W,H);
+  targets.forEach(function(q){
+    var r=rad(q);
+    ctx.fillStyle=col.accent;ctx.beginPath();ctx.arc(q.x,q.y,r,0,7);ctx.fill();
+    ctx.fillStyle=col.bg;ctx.beginPath();ctx.arc(q.x,q.y,r*0.62,0,7);ctx.fill();
+    ctx.fillStyle=col.accent;ctx.beginPath();ctx.arc(q.x,q.y,r*0.28,0,7);ctx.fill();
+  });
+  fx.forEach(function(f){
+    var a=(t-f.t)/0.3;ctx.globalAlpha=1-a;ctx.lineWidth=3;
+    if(f.k==="hit"){ctx.strokeStyle=col.ok;ctx.beginPath();ctx.arc(f.x,f.y,R*(0.6+a),0,7);ctx.stroke()}
+    else if(f.k==="miss"){ctx.strokeStyle=col.accent;ctx.beginPath();ctx.moveTo(f.x-9,f.y-9);ctx.lineTo(f.x+9,f.y+9);ctx.moveTo(f.x+9,f.y-9);ctx.lineTo(f.x-9,f.y+9);ctx.stroke()}
+    ctx.globalAlpha=1;
+  });
+}
+function loop(ts){
+  if(st!=="play")return;
+  var dt=last?Math.min(0.05,(ts-last)/1000):0;last=ts;
+  update(dt);draw();
+  if(st==="play")requestAnimationFrame(loop);
+}
+function begin(){colors();reset();st="play";last=0;ov.classList.add("hide");requestAnimationFrame(loop)}
+function finish(){
+  st="over";lock=Date.now()+600;targets=[];draw();
+  var tot=hits+fails+missed,q=tot?Math.round(hits/tot*100):0,rec=score>best;
+  if(rec){best=score;try{localStorage.setItem(KEY,String(best))}catch(e){}}
+  ovBig.textContent=score+" Pkt";ovBig.className="big"+(rec?" gold":"");
+  ovSub.textContent=(rec?"Neuer Rekord! ":"Rekord: "+best+". ")+"Treffer "+hits+", Fehltipps "+fails+", verpasst "+missed+" (Quote "+q+" %).";
+  document.getElementById("go").textContent="Nochmal";ov.classList.remove("hide");
+}
+cv.addEventListener("pointerdown",function(e){
+  if(st!=="play")return;e.preventDefault();
+  var r=cv.getBoundingClientRect(),x=e.clientX-r.left,y=e.clientY-r.top,bi=-1,bd=1e9;
+  targets.forEach(function(q,i){var dx=q.x-x,dy=q.y-y,d=Math.sqrt(dx*dx+dy*dy);if(d<=Math.max(rad(q),26)&&d<bd){bd=d;bi=i}});
+  if(bi>=0){var q=targets.splice(bi,1)[0];hits++;score+=mult();streak++;fx.push({x:q.x,y:q.y,t:t,k:"hit"})}
+  else{fails++;score=Math.max(0,score-1);streak=0;fx.push({x:x,y:y,t:t,k:"miss"})}
+  hud();
+});
+document.getElementById("go").addEventListener("click",function(){if(Date.now()>=lock)begin()});
+document.addEventListener("touchmove",function(e){e.preventDefault()},{passive:false});
+window.addEventListener("resize",fit);window.addEventListener("orientationchange",fit);
+colors();fit();hud();
+</script>
+</body>
+</html>
