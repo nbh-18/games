@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>F1 Start</title>
+<style>
+:root{--bg:#eceae4;--ink:#16181c;--mute:#6b7280;--line:#d6d3cb;--panel:#0b0c0e;--off:#2a1214;--on:#ff2a2a;--glow:rgba(255,42,42,.65);--ok:#12a85a;--bad:#e5483d;--gold:#b8860b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101215;--ink:#f1f2f4;--mute:#8b93a0;--line:#262a31;--ok:#2fd27a;--bad:#ff5a4f;--gold:#f5c542}}
+:root[data-theme="dark"]{--bg:#101215;--ink:#f1f2f4;--mute:#8b93a0;--line:#262a31;--ok:#2fd27a;--bad:#ff5a4f;--gold:#f5c542}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Avenir Next","Trebuchet MS",system-ui,sans-serif;-webkit-tap-highlight-color:transparent;overflow:hidden}
+#stage{height:100%;display:flex;flex-direction:column;justify-content:center;align-items:center;gap:22px;padding:16px;text-align:center;user-select:none;-webkit-user-select:none;touch-action:manipulation;outline:none;cursor:pointer}
+.label{font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);margin:0}
+.gantry{width:100%;max-width:520px;background:var(--panel);border-radius:22px;padding:clamp(14px,4vw,26px);display:grid;grid-template-columns:repeat(5,1fr);gap:clamp(8px,3vw,20px)}
+.col{display:grid;gap:clamp(8px,3vw,18px)}
+.lamp{aspect-ratio:1;border-radius:50%;background:var(--off);box-shadow:inset 0 0 0 3px #1c0b0d}
+.lamp.on{background:var(--on);box-shadow:0 0 22px 6px var(--glow),inset 0 0 0 3px #ff8a8a55}
+.big{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:clamp(2.4rem,12vw,4.2rem);font-weight:700;margin:0;min-height:1.2em;letter-spacing:-.02em}
+.big.ok{color:var(--ok)}.big.bad{color:var(--bad)}.big.gold{color:var(--gold)}
+.sub{margin:0;color:var(--mute);min-height:2.6em;max-width:420px;font-size:1rem}
+.stats{display:flex;gap:22px;justify-content:center;font-size:.85rem;color:var(--mute)}
+.stats b{display:block;color:var(--ink);font-size:1.15rem;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace}
+.reset{border:0;background:transparent;color:var(--mute);font:inherit;font-size:.8rem;text-decoration:underline;min-height:44px;padding:0 12px}
+</style>
+</head>
+<body>
+<main id="stage" role="button" tabindex="0" aria-label="Tippen zum Starten und Reagieren">
+  <p class="label">Formel-1-Start</p>
+  <div class="gantry" id="gantry" aria-hidden="true"></div>
+  <p class="big" id="big" aria-live="polite">Tippe zum Start</p>
+  <p class="sub" id="sub">Fünf Lichter gehen an. Tippe, sobald sie ausgehen. Zu früh ist ein Fehlstart.</p>
+  <div class="stats">
+    <div>Rekord<b id="best">–</b></div>
+    <div>Ø letzte 5<b id="avg">–</b></div>
+    <div>Versuche<b id="cnt">0</b></div>
+  </div>
+  <button class="reset" id="reset">Statistik zurücksetzen</button>
+</main>
+<script>
+var gantry=document.getElementById("gantry"),bigEl=document.getElementById("big"),subEl=document.getElementById("sub");
+var lamps=[],st="idle",timers=[],t0=0,lockUntil=0,hist=[],best=0;
+for(var c=0;c<5;c++){var col=document.createElement("div");col.className="col";
+  for(var r=0;r<2;r++){var l=document.createElement("div");l.className="lamp";l.dataset.c=c;col.appendChild(l);lamps.push(l)}
+  gantry.appendChild(col)}
+function lights(n){lamps.forEach(function(l){l.classList.toggle("on",+l.dataset.c<n)})}
+function clearT(){timers.forEach(clearTimeout);timers=[]}
+function say(big,sub,cls){bigEl.textContent=big;bigEl.className="big "+(cls||"");subEl.textContent=sub||""}
+function load(){try{hist=JSON.parse(localStorage.getItem("f1:hist")||"[]");best=+localStorage.getItem("f1:best")||0}catch(e){hist=[];best=0}}
+function persist(){try{localStorage.setItem("f1:hist",JSON.stringify(hist.slice(-50)));localStorage.setItem("f1:best",String(best))}catch(e){}}
+function stats(){
+  document.getElementById("best").textContent=best?best+" ms":"–";
+  var l=hist.slice(-5);document.getElementById("avg").textContent=l.length?Math.round(l.reduce(function(a,b){return a+b},0)/l.length)+" ms":"–";
+  document.getElementById("cnt").textContent=hist.length;
+}
+function start(){
+  clearT();lights(0);st="lighting";say("Bereit…","Nicht tippen, bevor die Lichter ausgehen.");
+  for(let i=1;i<=5;i++)timers.push(setTimeout(function(){lights(i);if(i===5){st="waiting";say("…","")}},i*900));
+  timers.push(setTimeout(go,5*900+300+Math.random()*3000));
+}
+function go(){
+  requestAnimationFrame(function(){lights(0);requestAnimationFrame(function(){t0=performance.now();st="go"})});
+}
+function rating(ms){return ms<200?"Fahrerniveau":ms<250?"Stark":ms<350?"Durchschnitt":"Zu langsam fürs Podium"}
+function fail(msg){clearT();st="done";lockUntil=Date.now()+500;say("Fehlstart",msg+" Tippe für einen neuen Versuch.","bad")}
+function press(ev){
+  if(Date.now()<lockUntil)return;
+  if(st==="idle"||st==="done"){start();return}
+  if(st==="lighting"||st==="waiting"){fail("Zu früh getippt.");return}
+  if(st==="go"){
+    var ts=ev&&ev.timeStamp>0&&ev.timeStamp<performance.now()+5?ev.timeStamp:performance.now();
+    var ms=Math.round(ts-t0);st="done";lockUntil=Date.now()+500;
+    if(ms<100){say("Fehlstart",ms<=0?"Vor dem Signal getippt.":"Unter 100 ms zählt in der Formel 1 als Fehlstart.","bad");return}
+    var rec=!best||ms<best;if(rec)best=ms;hist.push(ms);persist();stats();
+    say(ms+" ms",(rec?"Neuer Rekord! ":"")+rating(ms)+". Tippe für den nächsten Versuch.",rec?"gold":"ok");
+  }
+}
+var stage=document.getElementById("stage");
+stage.addEventListener("pointerdown",function(e){if(e.target.id==="reset")return;e.preventDefault();press(e)});
+stage.addEventListener("keydown",function(e){if(e.key===" "||e.key==="Enter"){e.preventDefault();press(e)}});
+document.getElementById("reset").addEventListener("click",function(e){
+  e.stopPropagation();if(!confirm("Rekord und Statistik löschen?"))return;
+  hist=[];best=0;persist();stats();
+});
+load();stats();
+</script>
+</body>
+</html>
