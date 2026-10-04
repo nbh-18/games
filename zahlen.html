@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Zahlen</title>
+<link rel="stylesheet" href="base.css">
+<style>
+#g{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 56px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(6,1fr);gap:10px}
+.t{border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);font:700 1.7rem "SF Mono",ui-monospace,Menlo,Consolas,monospace;touch-action:manipulation}
+.t.cov{color:transparent}.t.gone{visibility:hidden}
+</style>
+</head>
+<body>
+<div id="g"></div>
+<div class="hud"><span id="lv">Zahlen 3</span></div>
+<script src="game.js"></script>
+<script>
+G.setup({title:"Zahlen",rules:"Zahlen erscheinen kurz auf dem Feld. Tippe die 1, danach verschwinden die anderen. Tippe sie in der richtigen Reihenfolge an.",key:"game:zahlen:best",fmt:function(v){return v+" Level"}});
+var g=document.getElementById("g"),lv=document.getElementById("lv"),n=3,exp=1,live=false;
+function level(){
+  g.innerHTML="";exp=1;live=true;lv.textContent="Zahlen "+n;
+  var idx=[];for(var i=0;i<24;i++)idx.push(i);
+  for(i=idx.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1)),x=idx[i];idx[i]=idx[j];idx[j]=x}
+  var at={};for(i=0;i<n;i++)at[idx[i]]=i+1;
+  for(i=0;i<24;i++){
+    if(!at[i]){g.appendChild(document.createElement("div"));continue}
+    var b=G.el("button","t",at[i]);b.dataset.v=at[i];
+    b.addEventListener("pointerdown",function(e){e.preventDefault();hit(this)});g.appendChild(b);
+  }
+}
+function hit(b){
+  if(!live||b.classList.contains("gone"))return;
+  if(+b.dataset.v!==exp){live=false;G.end(n-3,n>3?"Bis zu "+(n-1)+" Zahlen geschafft.":"Schon beim ersten Level gescheitert.");return}
+  if(exp===1)[].forEach.call(g.querySelectorAll(".t"),function(t){if(t!==b)t.classList.add("cov")});
+  b.classList.add("gone");
+  if(++exp>n){live=false;n++;if(n>20){G.end(n-3,"Alle Level geschafft!");return}setTimeout(level,500)}
+}
+G.onStart(function(){n=3;level()});
+</script>
+</body>
+</html>

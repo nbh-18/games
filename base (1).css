@@ -1,0 +1,21 @@
+:root{--bg:#eceae4;--card:#fff;--ink:#16181c;--mute:#6b7280;--line:#d6d3cb;--accent:#e5483d;--accent-ink:#fff;--stone:#6b7280;--ok:#12a85a;--gold:#b8860b;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101215;--card:#181b20;--ink:#f1f2f4;--mute:#8b93a0;--line:#262a31;--stone:#9aa3b0;--ok:#2fd27a;--gold:#f5c542}}
+:root[data-theme="dark"]{--bg:#101215;--card:#181b20;--ink:#f1f2f4;--mute:#8b93a0;--line:#262a31;--stone:#9aa3b0;--ok:#2fd27a;--gold:#f5c542}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Avenir Next","Trebuchet MS",system-ui,sans-serif;-webkit-tap-highlight-color:transparent}
+.label{font-size:.8rem;letter-spacing:.18em;text-transform:uppercase;color:var(--mute);margin:0}
+.big{font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:clamp(2.2rem,11vw,3.6rem);font-weight:700;margin:6px 0;letter-spacing:-.02em}
+.sub{margin:0 0 16px;color:var(--mute);font-size:1rem}
+.btn{display:block;width:100%;min-height:48px;border:0;border-radius:14px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:700;font-size:1.05rem}
+.back{display:inline-block;margin-top:12px;min-height:44px;line-height:44px;color:var(--mute);text-decoration:none;font-size:.95rem}
+button:focus-visible,a:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+body.fix{position:fixed;top:0;left:0;right:0;bottom:0;overflow:hidden;overscroll-behavior:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.hud{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top,0px) + 10px);display:flex;justify-content:space-between;padding:0 16px;pointer-events:none;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-weight:700;z-index:2}
+.hud .m{color:var(--mute);font-weight:500}
+.ov{position:fixed;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;padding:20px;background:rgba(0,0,0,.45);z-index:5}
+.ov.hide{display:none}
+.panel{width:100%;max-width:360px;background:var(--card);border:1px solid var(--line);border-radius:22px;padding:22px;text-align:center}
+.big.gold{color:var(--gold)}
