@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Games">
+<meta name="theme-color" content="#eceae4" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#101215" media="(prefers-color-scheme: dark)">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<title>Muster merken</title>
+<link rel="stylesheet" href="base.css">
+<style>
+#g{position:fixed;left:16px;right:16px;top:calc(env(safe-area-inset-top,0px) + 56px);bottom:calc(env(safe-area-inset-bottom,0px) + 16px);display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;gap:14px}
+.pad{border:0;border-radius:22px;background:hsl(var(--h) 55% 28%);touch-action:manipulation}
+.pad.lit{background:hsl(var(--h) 85% 58%);box-shadow:0 0 28px hsl(var(--h) 90% 55% / .7)}
+</style>
+</head>
+<body>
+<div id="g"></div>
+<div class="hud"><span id="rd">Runde 0</span></div>
+<script src="game.js"></script>
+<script>
+G.setup({title:"Muster merken",rules:"Vier Felder leuchten nacheinander auf. Tippe sie in derselben Reihenfolge nach. Jede Runde wird die Folge um einen Schritt länger.",key:"game:muster:best",fmt:function(v){return v+" Runden"}});
+var g=document.getElementById("g"),rd=document.getElementById("rd"),pads=[],seq=[],pos=0,busy=true,timers=[];
+[0,130,215,45].forEach(function(h,i){
+  var b=G.el("button","pad");b.style.setProperty("--h",h);b.setAttribute("aria-label","Feld "+(i+1));
+  b.addEventListener("pointerdown",function(e){e.preventDefault();tap(i)});g.appendChild(b);pads.push(b);
+});
+function later(f,ms){timers.push(setTimeout(f,ms))}
+function flash(i,ms){pads[i].classList.add("lit");later(function(){pads[i].classList.remove("lit")},ms)}
+function next(){seq.push(Math.floor(Math.random()*4));rd.textContent="Runde "+seq.length;busy=true;later(play,700)}
+function play(){
+  var i=0,d=Math.max(260,520-seq.length*18);
+  (function step(){if(i>=seq.length){busy=false;pos=0;return}flash(seq[i++],d*0.7);later(step,d)})();
+}
+function tap(i){
+  if(busy)return;flash(i,150);
+  if(i!==seq[pos]){busy=true;G.end(seq.length-1,"Die Folge war "+seq.length+" lang.");return}
+  if(++pos===seq.length){busy=true;later(next,600)}
+}
+G.onStart(function(){timers.forEach(clearTimeout);timers=[];seq=[];next()});
+</script>
+</body>
+</html>
